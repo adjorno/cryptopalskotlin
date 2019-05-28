@@ -94,6 +94,7 @@ fun String.padPKS7(blockSize: Int) = String(this.toByteArray().padPKS7(blockSize
 @Throws(IllegalArgumentException::class)
 fun ByteArray.stripPadPKS7(): ByteArray {
     val padLength = this[size - 1]
+    if (padLength <= 0) throw IllegalArgumentException("String is not PKS7 padded!")
     (1..padLength).forEach { if (this[size - it] != padLength) throw IllegalArgumentException("String is not PKS7 padded!") }
     return this.copyOfRange(0, size - padLength)
 }

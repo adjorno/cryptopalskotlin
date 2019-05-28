@@ -4,7 +4,7 @@ import util.AES
 import kotlin.experimental.xor
 import kotlin.random.Random
 
-const val blockSize = 16
+private const val blockSize = 16
 var iv = Random.nextBytes(blockSize)
 
 /**

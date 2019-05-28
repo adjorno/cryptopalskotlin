@@ -5,6 +5,8 @@ import util.AES
 import util.CBC
 import util.padPKS7
 import util.stripPadPKS7
+import javax.crypto.BadPaddingException
+import kotlin.experimental.xor
 import kotlin.random.Random
 
 /**
@@ -57,19 +59,57 @@ import kotlin.random.Random
  * the actual padding on a CBC plaintext. It's an attack that targets a specific bit of code that handles decryption.
  * You can mount a padding oracle on any CBC block, whether it's padded or not.
  */
+private const val blockSize = 16
 
 @ExperimentalUnsignedTypes
 fun main() {
     val server = Server()
     val cipher2iv = server.encrypt()
-    val checkPadding = server.decryptAndCheckPadding(cipher2iv.first, Random.nextBytes(16))
-    println(checkPadding)
+    println(decipher(cipher2iv.first, cipher2iv.second, server::decryptAndCheckPadding))
+}
+
+fun decipher(cipher: ByteArray, iv: ByteArray, padding_oracle: (cipher: ByteArray, iv: ByteArray) -> Boolean): String {
+    var knownP = ""
+    val blocks = cipher.size / blockSize
+    (blocks downTo 1).forEach {
+        val st = cipher.slice(0 until blockSize * it).toByteArray()
+        knownP = decipher_last_block(st, iv, padding_oracle) + knownP
+    }
+    return knownP.stripPadPKS7()
+}
+
+fun decipher_last_block(
+    st: ByteArray, iv: ByteArray,
+    padding_oracle: (iv: ByteArray, cipher: ByteArray) -> Boolean
+): String {
+    var knownI = byteArrayOf()
+    var knownP = byteArrayOf()
+    ((blockSize - 1) downTo 0).forEach { i ->
+        val k = (blockSize - i).toByte()
+        val prefix = Random.nextBytes(i)
+        (Byte.MIN_VALUE..Byte.MAX_VALUE).first {
+            val c1 =
+                if (st.size > blockSize) st.slice((st.size - blockSize * 2) until (st.size - blockSize)).toByteArray() else iv
+            val c1p = prefix + byteArrayOf(it.toByte()) + knownI.map { ch -> ch xor k }.toByteArray()
+            val sp =
+                st.slice(0 until (st.size - blockSize * 2)).toByteArray() + c1p + st.slice((st.size - blockSize) until st.size).toByteArray()
+            var result = false
+            if (padding_oracle(sp, iv)) {
+                val iPrev = it.toByte() xor k
+                val pPrev = c1[c1.size - k] xor iPrev
+                knownI = byteArrayOf(iPrev) + knownI
+                knownP = byteArrayOf(pPrev) + knownP
+                result = true
+            }
+            result
+        }
+    }
+    return String(knownP)
 }
 
 @ExperimentalUnsignedTypes
 class Server {
     companion object {
-        const val blockSize = 16
         val strings = arrayOf(
             "MDAwMDAwTm93IHRoYXQgdGhlIHBhcnR5IGlzIGp1bXBpbmc=",
             "MDAwMDAxV2l0aCB0aGUgYmFzcyBraWNrZWQgaW4gYW5kIHRoZSBWZWdhJ3MgYXJlIHB1bXBpbic=",
@@ -93,17 +133,19 @@ class Server {
 
     fun encrypt(): Pair<ByteArray, ByteArray> {
         val iv = Random.nextBytes(blockSize)
-        return AES.encryptCBC(key, iv).doFinal(Base64.decode(strings[randomStringId]).padPKS7(blockSize)) to iv
+        val decoded = Base64.decode(strings[randomStringId])
+        return AES.encryptCBC(key, iv).doFinal(decoded) to iv
     }
 
     fun decryptAndCheckPadding(cipher: ByteArray, iv: ByteArray) =
         try {
             CBC.decrypt(cipher, AES.decryptECB(key), iv)
             //AES.decryptCBC(key, iv).doFinal(cipher)
-                .also { println(String(it)) }
                 .stripPadPKS7()
             true
         } catch (e: IllegalArgumentException) {
+            false
+        } catch (e: BadPaddingException) {
             false
         }
 }
