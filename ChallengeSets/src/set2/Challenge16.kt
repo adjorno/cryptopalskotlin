@@ -1,6 +1,8 @@
 package set2
 
 import util.AES
+import util.CBC
+import util.padPKS7
 import kotlin.experimental.xor
 import kotlin.random.Random
 
@@ -53,12 +55,12 @@ fun encrypt(key: ByteArray, str: String): ByteArray {
     fun clean(str: String) = str.replace("=", "").replace(";", "")
     val result = "comment1=cooking%20MCs;userdata=${clean(str)};comment2=%20like%20a%20pound%20of%20bacon"
         .also { println(it) }
-    return AES.encryptCBC(key, iv).doFinal(result.toByteArray())
+    return CBC.encrypt(result.toByteArray().padPKS7(blockSize), AES.encryptECB(key), iv)
 }
 
 fun decrypt(key: ByteArray, encrypted: ByteArray): Boolean {
-    return String(AES.decryptCBC(key, iv).doFinal(encrypted))
+    return String(CBC.decrypt(encrypted, AES.decryptECB(key), iv))
         .also { println(it) }
-        .split(";").map { it.split("=").let { tuple -> tuple[0] to tuple[1] } }
+        .split(";").map { it.split("=").let { tuple -> tuple[0] to (if (tuple.size > 1) tuple[1] else "") } }
         .firstOrNull { tuple -> tuple.first == "admin" } != null
 }

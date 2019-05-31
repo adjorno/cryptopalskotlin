@@ -4,6 +4,7 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.json
 import util.AES
 import util.padPKS7
+import util.stripPadPKS7
 import kotlin.random.Random
 
 /**
@@ -102,5 +103,6 @@ fun profileFor(email: String) = encodeProfile(mapOf("email" to email, "uid" to "
 fun encryptProfile(key: ByteArray, email: String): ByteArray =
     AES.encryptECB(key).doFinal(profileFor(email).padPKS7(key.size).toByteArray())
 
+@ExperimentalUnsignedTypes
 fun decryptProfile(key: ByteArray, encrypted: ByteArray): JsonObject =
-    parse(String(AES.decryptECB(key, "PKCS5Padding").doFinal(encrypted)))
+    parse(String(AES.decryptECB(key).doFinal(encrypted).stripPadPKS7()))

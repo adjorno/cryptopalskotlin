@@ -91,14 +91,16 @@ fun ByteArray.padPKS7(blockSize: Int) = (blockSize - (this.size % blockSize)).to
 @ExperimentalUnsignedTypes
 fun String.padPKS7(blockSize: Int) = String(this.toByteArray().padPKS7(blockSize))
 
+@ExperimentalUnsignedTypes
 @Throws(IllegalArgumentException::class)
 fun ByteArray.stripPadPKS7(): ByteArray {
-    val padLength = this[size - 1]
-    if (padLength <= 0) throw IllegalArgumentException("String is not PKS7 padded!")
-    (1..padLength).forEach { if (this[size - it] != padLength) throw IllegalArgumentException("String is not PKS7 padded!") }
+    val padLength = this[size - 1].toUByte().toInt()
+    if (padLength == 0) throw IllegalArgumentException("String is not PKS7 padded!")
+    (1..padLength).forEach { if (this[size - it].toUByte().toInt() != padLength) throw IllegalArgumentException("String is not PKS7 padded!") }
     return this.copyOfRange(0, size - padLength)
 }
 
+@ExperimentalUnsignedTypes
 @Throws(IllegalArgumentException::class)
 fun String.stripPadPKS7() = String(toByteArray().stripPadPKS7())
 

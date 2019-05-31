@@ -68,6 +68,7 @@ fun main() {
     println(decipher(cipher2iv.first, cipher2iv.second, server::decryptAndCheckPadding))
 }
 
+@ExperimentalUnsignedTypes
 fun decipher(cipher: ByteArray, iv: ByteArray, padding_oracle: (cipher: ByteArray, iv: ByteArray) -> Boolean): String {
     var knownP = ""
     val blocks = cipher.size / blockSize
@@ -133,15 +134,13 @@ class Server {
 
     fun encrypt(): Pair<ByteArray, ByteArray> {
         val iv = Random.nextBytes(blockSize)
-        val decoded = Base64.decode(strings[randomStringId])
-        return AES.encryptCBC(key, iv).doFinal(decoded) to iv
+        val decoded = Base64.decode(strings[randomStringId]).padPKS7(blockSize)
+        return CBC.encrypt(decoded, AES.encryptECB(key), iv) to iv
     }
 
     fun decryptAndCheckPadding(cipher: ByteArray, iv: ByteArray) =
         try {
-            CBC.decrypt(cipher, AES.decryptECB(key), iv)
-            //AES.decryptCBC(key, iv).doFinal(cipher)
-                .stripPadPKS7()
+            CBC.decrypt(cipher, AES.decryptECB(key), iv).stripPadPKS7()
             true
         } catch (e: IllegalArgumentException) {
             false

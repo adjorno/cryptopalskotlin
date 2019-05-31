@@ -87,6 +87,7 @@ obj/
 .idea/assetWizardSettings.xml
 .idea/markdown-navigator/profiles_settings.xml
 .idea/markdown-navigator.xml
+.idea/markdown-exported-files.xml
 
 # OS-specific files
 .DS_Store

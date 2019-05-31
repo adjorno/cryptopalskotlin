@@ -2,6 +2,7 @@ package set2
 
 import util.AES
 import util.commonPrefixLength
+import util.padPKS7
 import java.util.*
 import kotlin.random.Random
 
@@ -19,6 +20,10 @@ import kotlin.random.Random
  *
  * Think "STIMULUS" and "RESPONSE".
  */
+
+private const val blockSize = 16
+
+@ExperimentalUnsignedTypes
 fun main() {
     val unknown = String(
         Base64.getDecoder().decode(
@@ -28,9 +33,9 @@ fun main() {
                     + "YnkK"
         )
     )
-    val random = Random.nextBytes(Random.nextInt(16))
-    val cipher = AES.encryptECB(Random.nextBytes(16), "PKCS5Padding")
-    val oracle = { known: String -> cipher.doFinal(random + (known + unknown).toByteArray()) }
+    val random = Random.nextBytes(Random.nextInt(blockSize))
+    val cipher = AES.encryptECB(Random.nextBytes(blockSize))
+    val oracle = { known: String -> cipher.doFinal((random + (known + unknown).toByteArray()).padPKS7(blockSize)) }
 
     println(decrypt(oracle))
 }
@@ -54,13 +59,18 @@ private fun decrypt(oracle: (String) -> ByteArray): String {
         if (index == cracked.length) {
             val known = "A".repeat(blockSize - ((cracked.length + 1) % blockSize) + missingPrefix)
             (0..255).asSequence().map { it.toChar().toString() }.firstOrNull {
-                oracle(known + cracked + it).copyOfRange(0,
-                    known.length + index + 1 + (blockSize - missingPrefix) % blockSize)
-                    .contentEquals(oracle(known).copyOfRange(0,
-                            known.length + index + 1 + (blockSize - missingPrefix) % blockSize))
+                oracle(known + cracked + it).copyOfRange(
+                    0,
+                    known.length + index + 1 + (blockSize - missingPrefix) % blockSize
+                )
+                    .contentEquals(
+                        oracle(known).copyOfRange(
+                            0,
+                            known.length + index + 1 + (blockSize - missingPrefix) % blockSize
+                        )
+                    )
             }?.apply {
                 cracked += this
-                print(this)
             }
         }
     }

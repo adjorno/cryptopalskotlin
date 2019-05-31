@@ -2,6 +2,7 @@ package set2
 
 import util.AES
 import util.commonPrefixLength
+import util.padPKS7
 import java.util.*
 import kotlin.random.Random
 
@@ -42,6 +43,10 @@ import kotlin.random.Random
  *
  * Repeat for the next byte.
  */
+
+private const val blockSize = 16
+
+@ExperimentalUnsignedTypes
 fun main() {
     val unknown = String(
         Base64.getDecoder().decode(
@@ -51,8 +56,8 @@ fun main() {
                     + "YnkK"
         )
     )
-    val cipher = AES.encryptECB(Random.nextBytes(16), "PKCS5Padding")
-    val oracle = { known: String -> cipher.doFinal((known + unknown).toByteArray()) }
+    val cipher = AES.encryptECB(Random.nextBytes(blockSize))
+    val oracle = { known: String -> cipher.doFinal((known + unknown).toByteArray().padPKS7(blockSize)) }
 
     println(decrypt(oracle))
 }
