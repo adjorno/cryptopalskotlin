@@ -65,47 +65,45 @@ private const val blockSize = 16
 fun main() {
     val server = Server()
     val cipher2iv = server.encrypt()
-    println(decipher(cipher2iv.first, cipher2iv.second, server::decryptAndCheckPadding))
-}
 
-@ExperimentalUnsignedTypes
-fun decipher(cipher: ByteArray, iv: ByteArray, padding_oracle: (cipher: ByteArray, iv: ByteArray) -> Boolean): String {
-    var knownP = ""
-    val blocks = cipher.size / blockSize
-    (blocks downTo 1).forEach {
-        val st = cipher.slice(0 until blockSize * it).toByteArray()
-        knownP = decipher_last_block(st, iv, padding_oracle) + knownP
+    var decrypted = ""
+    // Split in blocks and decrypt each block as ECB and then XOR with previous block (or IV in case of 1st block)
+    // to get the CBC result
+    val blocks = cipher2iv.first.toList().chunked(blockSize) { it.toByteArray() }
+    (blocks.size - 1 downTo 0).forEach {
+        // Decrypt block as ECB
+        val decryptedBlock = decryptBlock(blocks[it], server::decryptAndCheckPadding)
+        // XOR it with previous block to get CBC
+        val xored = decryptedBlock.zip(if (it > 0) blocks[it - 1] else cipher2iv.second).map { it.first xor it.second }
+            .toByteArray()
+        decrypted = String(xored) + decrypted
     }
-    return knownP.stripPadPKS7()
+
+    println("Detector decrypted:")
+    println(decrypted.stripPadPKS7())
 }
 
-fun decipher_last_block(
-    st: ByteArray, iv: ByteArray,
-    padding_oracle: (iv: ByteArray, cipher: ByteArray) -> Boolean
-): String {
-    var knownI = byteArrayOf()
-    var knownP = byteArrayOf()
+fun decryptBlock(block: ByteArray, oracle: (ByteArray, ByteArray) -> Boolean): ByteArray {
+    val decryptedBlock = ByteArray(blockSize)
+    // Decrypt the block using bitflipping attack to get the correct value of every possible padding
     ((blockSize - 1) downTo 0).forEach { i ->
-        val k = (blockSize - i).toByte()
+        val padding = (blockSize - i).toByte()
         val prefix = Random.nextBytes(i)
+        // Try to find i-byte which would give a correct padding
         (Byte.MIN_VALUE..Byte.MAX_VALUE).first {
-            val c1 =
-                if (st.size > blockSize) st.slice((st.size - blockSize * 2) until (st.size - blockSize)).toByteArray() else iv
-            val c1p = prefix + byteArrayOf(it.toByte()) + knownI.map { ch -> ch xor k }.toByteArray()
-            val sp =
-                st.slice(0 until (st.size - blockSize * 2)).toByteArray() + c1p + st.slice((st.size - blockSize) until st.size).toByteArray()
-            var result = false
-            if (padding_oracle(sp, iv)) {
-                val iPrev = it.toByte() xor k
-                val pPrev = c1[c1.size - k] xor iPrev
-                knownI = byteArrayOf(iPrev) + knownI
-                knownP = byteArrayOf(pPrev) + knownP
-                result = true
-            }
-            result
+            // Generated vector is constructed from 3 parts:
+            // - random prefix
+            // - searching byte
+            // - decrypted block xored with expected padding (bitflipping attack to change the result)
+            val genVector =
+                prefix + byteArrayOf(it.toByte()) + decryptedBlock.takeLast(padding - 1).map { it xor padding }.toByteArray()
+            oracle(block, genVector)
+        }.also {
+            // decrypt i-byte of this block by xoring the found value with padding to flip it back
+            decryptedBlock[i] = it.toByte() xor padding
         }
     }
-    return String(knownP)
+    return decryptedBlock
 }
 
 @ExperimentalUnsignedTypes
@@ -129,6 +127,7 @@ class Server {
     private val randomStringId = Random.nextInt(strings.size)
 
     init {
+        println("Oracle chose:")
         println(String(Base64.decode(strings[randomStringId])))
     }
 
