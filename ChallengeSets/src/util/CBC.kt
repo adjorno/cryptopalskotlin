@@ -6,12 +6,9 @@ object CBC {
 
     fun encrypt(decrypted: ByteArray, ecb: Cipher, iv: ByteArray): ByteArray {
         var stepIV = iv
-        return sequence {
-            yieldAll(decrypted.asSequence())
-        }.chunked(ecb.blockSize).map { chunk ->
-            ecb.doFinal(chunk.toByteArray() xor stepIV).also { result ->
-                stepIV = result
-            }
+        return decrypted.asSequence().chunked(ecb.blockSize).map { chunk ->
+            ecb.doFinal(chunk.toByteArray() xor stepIV)
+                .also { result -> stepIV = result }
         }.reduce { acc, bytes -> acc + bytes }
     }
 
