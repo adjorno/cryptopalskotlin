@@ -43,7 +43,7 @@ fun main() {
     ciphers.forEach { println(String(it.xorOnce(key))) }
 
     println("""*********Decrypted*********
-${String(target.xor(key))}
+${String(target xor key)}
     """)
 
 }

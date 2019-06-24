@@ -9,20 +9,20 @@ object CBC {
         return sequence {
             yieldAll(decrypted.asSequence())
         }.chunked(ecb.blockSize).map { chunk ->
-            ecb.doFinal(chunk.toByteArray().xor(stepIV)).also { result ->
+            ecb.doFinal(chunk.toByteArray() xor stepIV).also { result ->
                 stepIV = result
-            }.toTypedArray()
-        }.toList().toTypedArray().flatten().toByteArray()
+            }
+        }.reduce { acc, bytes -> acc + bytes }
     }
 
     fun decrypt(encrypted: ByteArray, ecb: Cipher, iv: ByteArray): ByteArray {
         var stepIV = iv
         return encrypted.asSequence().chunked(ecb.blockSize).map {
             val chunk = it.toByteArray()
-            ecb.doFinal(chunk).xor(stepIV).also {
+            (ecb.doFinal(chunk) xor stepIV).also {
                 stepIV = chunk
-            }.toTypedArray()
-        }.toList().toTypedArray().flatten().toByteArray()
+            }
+        }.reduce { acc, bytes -> acc + bytes }
     }
 
 }

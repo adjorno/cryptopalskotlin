@@ -11,7 +11,7 @@ fun String.hexToByteArray() = generateSequence(0) { index -> if (index + 2 >= le
 fun String.hexToBase64(): String = hexToByteArray().let { Base64.getEncoder().encodeToString(it) }
 
 @ExperimentalUnsignedTypes
-fun String.xor(against: String) = hexToByteArray().xor(against.hexToByteArray()).toHexString()
+fun String.xor(against: String) = (hexToByteArray() xor against.hexToByteArray()).toHexString()
 
 val character_frequencies = mapOf(
     'a' to .08167, 'b' to .01492, 'c' to .02782, 'd' to .04253,
@@ -45,16 +45,16 @@ fun <T> Sequence<T>.repeat(n: Int) = sequence { repeat(n) { yieldAll(this@repeat
 /**
  * Expand [against] array by repeating its value
  */
-fun ByteArray.xor(against: ByteArray) =
+infix fun ByteArray.xor(against: ByteArray) =
     zip(against.asSequence().repeat(size).toList().toByteArray()).map { it.first xor it.second }.toByteArray()
 
 /**
  * Expand [against] byte by repeating its value
  */
-fun ByteArray.xor(against: Byte) = this.xor(arrayOf(against).toByteArray())
+fun ByteArray.xor(against: Byte) = this xor arrayOf(against).toByteArray()
 
 @ExperimentalUnsignedTypes
-fun String.xorKey(key: String) = toByteArray().xor(key.toByteArray()).toHexString()
+fun String.xorKey(key: String) = (toByteArray() xor key.toByteArray()).toHexString()
 
 /**
  * Does not expand [against]

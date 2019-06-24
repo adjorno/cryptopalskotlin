@@ -47,7 +47,7 @@ fun main() {
 
     println(
         """Decrypted text
-${String(bytes.xor(key.toByteArray()))}"""
+${String(bytes xor key.toByteArray())}"""
     )
 }
 
