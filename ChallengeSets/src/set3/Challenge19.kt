@@ -3,8 +3,6 @@ package set3
 import com.sun.org.apache.xml.internal.security.utils.Base64
 import util.AES
 import util.CTR
-import util.search
-import util.xor
 import java.io.File
 import java.nio.file.Paths
 import kotlin.random.Random
@@ -81,21 +79,5 @@ fun main() {
     val cipher = AES.encryptECB(Random.nextBytes(BLOCK_SIZE))
     val encrypted = File("${Paths.get("").toAbsolutePath()}${File.separator}data${File.separator}19.txt").readLines()
         .map { CTR.encrypt(cipher, 0, Base64.decode(it)) }.toTypedArray()
-
-    // 1. Transpose encrypted to have bytes with the same index in the array
-    var index = 0
-    val key = generateSequence {
-        encrypted.mapNotNull { line -> line.getOrNull(index) }.toByteArray()
-            .takeIf { it.isNotEmpty() }.also { index++ }
-    }
-        // 2. Find the each byte of the key with character frequency attack
-        .map { indexedChars -> search(indexedChars).first() }
-        .map { result -> result.first.second.toByte() }.toList().toByteArray()
-
-    // 3. XOR the key with each line to decrypt it (some correction might needed)
-    encrypted.map {
-        (it xor key)
-            .also { result -> println(String(result)) }
-    }
 
 }
