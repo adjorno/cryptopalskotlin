@@ -50,11 +50,10 @@ fun main() {
     val data = "L77na/nrFsKvynd6HzOoG7GHTLXsTVu9qvY/2syLXzhPweyyMTJULu/6/kXX0KSvoOLSFQ=="
     val key = "YELLOW SUBMARINE".toByteArray()
     val cipher = AES.encryptECB(key)
-    val nonce = ByteArray(key.size / 2) { 0 }
-    CTR.decrypt(cipher, nonce, Base64.decode(data))
+    CTR.decrypt(cipher, 0, Base64.decode(data))
         .also {
             println("""Decrypted => ${String(it)}""")
-        }.let { decrypted -> CTR.encrypt(cipher, nonce, decrypted) }
+        }.let { decrypted -> CTR.encrypt(cipher, 0, decrypted) }
         .also {
             println("""Encrypted Base64 => ${Base64.encode(it)}""")
         }
