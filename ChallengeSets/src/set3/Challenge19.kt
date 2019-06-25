@@ -3,8 +3,10 @@ package set3
 import com.sun.org.apache.xml.internal.security.utils.Base64
 import util.AES
 import util.CTR
+import util.xor
 import java.io.File
 import java.nio.file.Paths
+import kotlin.experimental.xor
 import kotlin.random.Random
 
 /**
@@ -77,7 +79,45 @@ private const val BLOCK_SIZE = 16
 
 fun main() {
     val cipher = AES.encryptECB(Random.nextBytes(BLOCK_SIZE))
-    val encrypted = File("${Paths.get("").toAbsolutePath()}${File.separator}data${File.separator}19.txt").readLines()
-        .map { CTR.encrypt(cipher, 0, Base64.decode(it)) }.toTypedArray()
+    val encrypted = File("${Paths.get("").toAbsolutePath()}${File.separator}data${File.separator}20.txt").readLines()
+        .map { CTR.encrypt(cipher, 0, Base64.decode(it)) }
 
+    // Observations:
+    // 1.) If we xor two ciphetexts, result is equal to xor of plaintexts.
+    // 2.) Space xor letter is always a letter.
+    // So, if we xor ciphertext with all others and get a lot of letters at some character position, then that position probably contains space.
+    val letters = (('a'..'z') + ('A'..'Z')).map { it.toByte() } + 0 + (listOf(
+        ',',
+        '.',
+        ':',
+        ';',
+        '-',
+        '?',
+        '!',
+        '/',
+        '"',
+        '\''
+    ) + ('0'..'9')).map { ' '.toByte() xor it.toByte() }
+    val keyStreamMap = mutableMapOf<Int, Byte>()
+    var maxLine = 0
+    encrypted.forEach { base ->
+        base.forEachIndexed { index, byte ->
+            if (encrypted.all { other ->
+                    val letterContains =
+                        other === base || other.size <= index || letters.contains(byte xor other[index])
+                    letterContains
+                }) {
+                keyStreamMap[index] = ' '.toByte() xor byte
+            }
+        }
+        if (base.size > maxLine) {
+            maxLine = base.size
+        }
+    }
+    val keyStream = ByteArray(maxLine) { 0 }.apply {
+        keyStreamMap.forEach { (i, byte) -> this[i] = byte }
+    }
+    encrypted.forEach {
+        println(String(it.xor(keyStream)))
+    }
 }
