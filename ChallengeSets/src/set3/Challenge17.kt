@@ -74,7 +74,8 @@ fun main() {
         // Decrypt block as ECB
         val decryptedBlock = decryptBlock(blocks[it], server::decryptAndCheckPadding)
         // XOR it with previous block to get CBC
-        val xored = decryptedBlock.zip(if (it > 0) blocks[it - 1] else cipher2iv.second).map { it.first xor it.second }
+        val xored = decryptedBlock.zip(if (it > 0) blocks[it - 1] else cipher2iv.second)
+            .map { previousAndCurrent -> previousAndCurrent.first xor previousAndCurrent.second }
             .toByteArray()
         decrypted = String(xored) + decrypted
     }
