@@ -3,6 +3,7 @@ package set3
 import com.sun.org.apache.xml.internal.security.utils.Base64
 import util.AES
 import util.CTR
+import util.text_characters
 import util.xor
 import java.io.File
 import java.nio.file.Paths
@@ -86,18 +87,8 @@ fun main() {
     // 1.) If we xor two ciphetexts, result is equal to xor of plaintexts.
     // 2.) Space xor letter is always a letter.
     // So, if we xor ciphertext with all others and get a lot of letters at some character position, then that position probably contains space.
-    val letters = (('a'..'z') + ('A'..'Z')).map { it.toByte() } + 0 + (listOf(
-        ',',
-        '.',
-        ':',
-        ';',
-        '-',
-        '?',
-        '!',
-        '/',
-        '"',
-        '\''
-    ) + ('0'..'9')).map { ' '.toByte() xor it.toByte() }
+    val letters =
+        (('a'..'z') + ('A'..'Z')).map { it.toByte() } + text_characters.map { ' '.toByte() xor it.toByte() } + 0
     val keyStreamMap = mutableMapOf<Int, Byte>()
     var maxLine = 0
     encrypted.forEach { base ->
