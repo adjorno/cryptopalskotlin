@@ -23,7 +23,7 @@ val character_frequencies = mapOf(
     'y' to .01974, 'z' to .00074, ' ' to .13000
 )
 
-fun String.etaoinshrdlu() = sumByDouble { c -> character_frequencies.getOrDefault(c.toLowerCase(), 0.toDouble()) }
+fun String.etaoinshrdlu() = sumByDouble { c -> character_frequencies.getOrDefault(c.toLowerCase(), -0.2) }
 
 @ExperimentalUnsignedTypes
 fun search(string: String) = search(arrayOf(string))
