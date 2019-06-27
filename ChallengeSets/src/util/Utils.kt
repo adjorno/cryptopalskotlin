@@ -23,7 +23,7 @@ val character_frequencies = mapOf(
     'y' to .01974, 'z' to .00074, ' ' to .13000
 )
 
-fun String.etaoinshrdlu() = sumByDouble { c -> character_frequencies.getOrDefault(c, 0.toDouble()) }
+fun String.etaoinshrdlu() = sumByDouble { c -> character_frequencies.getOrDefault(c.toLowerCase(), 0.toDouble()) }
 
 @ExperimentalUnsignedTypes
 fun search(string: String) = search(arrayOf(string))
@@ -33,10 +33,12 @@ fun search(strings: Array<String>) = search(strings.map { it.hexToByteArray() }.
 
 fun search(bytes: ByteArray) = search(arrayOf(bytes))
 
-fun search(strings: Array<ByteArray>) =
-    strings.flatMap { data ->
+fun search(strings: Array<ByteArray>): List<Pair<Pair<ByteArray, Char>, String>> {
+    val results = strings.flatMap { data ->
         (0..255).map { it.toChar() }.map { c -> (data to c) to String(data.xor(c.toByte())) }
-    }.sortedByDescending { it.second.etaoinshrdlu() }
+    }
+    return results.sortedByDescending { it.second.etaoinshrdlu() }
+}
 
 fun String.hammingWeight(against: String) = toByteArray().hammingWeight(against.toByteArray())
 
